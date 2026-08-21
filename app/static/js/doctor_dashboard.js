@@ -1,75 +1,16 @@
-        // ========== CONFIG ==========
-        const API_BASE = '';
-        let token = localStorage.getItem('token');
-        let currentUser = null;
-        let eventSource = null;
-        let hasNewAppointment = false;
+// Doctor Dashboard - page specific logic
+requireAuth();
 
-        // ========== AUTH CHECK ==========
-        if (!token) {
-            window.location.href = '/login';
-        }
+let currentUser = null;
+let eventSource = null;
+let hasNewAppointment = false;
 
-        // ========== API HELPERS ==========
-        async function apiGet(endpoint) {
-            const res = await fetch(`${API_BASE}${endpoint}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.status === 401) {
-                showToast('Session expirée. Reconnexion...', 'error');
-                setTimeout(logout, 1500);
-                throw new Error('Unauthorized');
-            }
-            if (!res.ok) {
-                const err = await res.json().catch(() => ({ detail: 'Erreur serveur' }));
-                throw new Error(err.detail || `HTTP ${res.status}`);
-            }
-            return res.json();
-        }
-
-        async function apiPut(endpoint, body) {
-            const res = await fetch(`${API_BASE}${endpoint}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify(body)
-            });
-            if (res.status === 401) {
-                showToast('Session expirée. Reconnexion...', 'error');
-                setTimeout(logout, 1500);
-                throw new Error('Unauthorized');
-            }
-            if (!res.ok) {
-                const err = await res.json().catch(() => ({ detail: 'Erreur serveur' }));
-                throw new Error(err.detail || `HTTP ${res.status}`);
-            }
-            return res.json();
-        }
-
-        async function apiPatch(endpoint, body) {
-            const res = await fetch(`${API_BASE}${endpoint}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify(body)
-            });
-            if (res.status === 401) {
-                showToast('Session expirée. Reconnexion...', 'error');
-                setTimeout(logout, 1500);
-                throw new Error('Unauthorized');
-            }
-            if (!res.ok) {
-                const err = await res.json().catch(() => ({ detail: 'Erreur serveur' }));
-                throw new Error(err.detail || `HTTP ${res.status}`);
-            }
-            return res.json();
-        }
-
-        // ========== SSE (SERVER-SENT EVENTS) ==========
         function connectSSE() {
             if (eventSource) {
                 eventSource.close();
             }
 
-            eventSource = new EventSource(`/events/doctor?token=${token}`);
+            eventSource = new EventSource(`/events/doctor?token=${getToken()}`);
 
             eventSource.onopen = () => {
                 updateConnectionStatus(true);
@@ -165,8 +106,9 @@
         }
 
         // ========== INIT ==========
+// ========== INIT ==========
         async function init() {
-            if (!token) return;
+            if (!getToken()) return;
 
             // Connect SSE first for real-time updates
             connectSSE();
@@ -373,37 +315,18 @@
         }
 
         // ========== UTILS ==========
-        function logout() {
-            if (eventSource) {
-                eventSource.close();
-            }
-            localStorage.removeItem('token');
-            window.location.href = '/login';
-        }
-
-        function showToast(message, type = 'success') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            const bgColor = type === 'success' ? 'bg-emerald-500' : 'bg-red-500';
-            const icon = type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation';
-
-            toast.className = `${bgColor} text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 toast-enter pointer-events-auto max-w-sm`;
-            toast.innerHTML = `<i class="fa-solid ${icon} text-lg"></i> <span class="font-semibold text-sm">${message}</span>`;
-
-            container.appendChild(toast);
-            setTimeout(() => {
-                toast.classList.remove('toast-enter');
-                toast.classList.add('toast-exit');
-                setTimeout(() => toast.remove(), 300);
-            }, 4000);
-        }
-
-        // ========== CLEANUP ON PAGE UNLOAD ==========
-        window.addEventListener('beforeunload', () => {
-            if (eventSource) {
                 eventSource.close();
             }
         });
+
+        // Override shared logout to close SSE first
+        const sharedLogout = logout;
+        logout = function () {
+            if (eventSource) {
+                eventSource.close();
+            }
+            sharedLogout();
+        };
 
         // ========== START ==========
         init();
