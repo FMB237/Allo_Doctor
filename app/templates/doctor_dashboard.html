@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tableau de Bord Docteur | Allo Doctor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+        .skeleton {
+            background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 12px;
+        }
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        .toast-enter { animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .toast-exit { animation: slideOut 0.3s ease-in forwards; }
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+        /* Pulse animation for new appointment indicator */
+        .pulse-ring {
+            animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+        }
+        .live-badge {
+            animation: live-pulse 2s ease-in-out infinite;
+        }
+        @keyframes live-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+<base target="_blank">
+</head>
+<body class="bg-slate-50 text-slate-900">
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-5 right-5 z-[100] flex flex-col gap-3 pointer-events-none"></div>
+
+    <!-- Navigation -->
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl">🩺</span>
+                    <span class="text-xl font-bold text-slate-800">Allo<span class="text-blue-600">Doctor</span></span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <!-- Live connection indicator -->
+                    <div id="connection-status" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 text-slate-500 text-xs font-bold transition-all">
+                        <span class="w-2 h-2 rounded-full bg-slate-400 transition-colors" id="connection-dot"></span>
+                        <span id="connection-text">Hors ligne</span>
+                    </div>
+                    <span id="user-name" class="text-sm font-medium text-slate-600">Chargement...</span>
+                    <button onclick="logout()" class="text-sm font-semibold text-red-500 hover:text-red-700 transition">Déconnexion</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Welcome Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-extrabold text-slate-900">Bonjour, <span id="welcome-name" class="text-blue-600">Docteur</span> 👋</h1>
+            <p class="text-slate-500">Gérez vos consultations et votre profil professionnel.</p>
+        </div>
+
+        <!-- Tabs Navigation -->
+        <div class="flex gap-4 mb-8 border-b border-slate-200">
+            <button onclick="switchTab('schedule')" id="tab-schedule" class="pb-4 px-2 text-sm font-bold border-b-2 border-blue-600 text-blue-600 transition">
+                <i class="fa-solid fa-calendar-check mr-2"></i>Mon Planning
+                <span id="new-badge" class="hidden ml-2 bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">NOUVEAU</span>
+            </button>
+            <button onclick="switchTab('profile')" id="tab-profile" class="pb-4 px-2 text-sm font-medium text-slate-500 hover:text-blue-600 transition">
+                <i class="fa-solid fa-user-gear mr-2"></i>Mon Profil
+            </button>
+        </div>
+
+        <!-- Tab 1: Schedule -->
+        <div id="view-schedule" class="block">
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition">
+                    <div class="text-2xl font-extrabold text-blue-600" id="stat-total">-</div>
+                    <div class="text-xs text-slate-500 font-semibold uppercase tracking-wide">Total</div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition">
+                    <div class="text-2xl font-extrabold text-yellow-500" id="stat-pending">-</div>
+                    <div class="text-xs text-slate-500 font-semibold uppercase tracking-wide">En attente</div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition">
+                    <div class="text-2xl font-extrabold text-emerald-500" id="stat-confirmed">-</div>
+                    <div class="text-xs text-slate-500 font-semibold uppercase tracking-wide">Confirmés</div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition">
+                    <div class="text-2xl font-extrabold text-slate-400" id="stat-completed">-</div>
+                    <div class="text-xs text-slate-500 font-semibold uppercase tracking-wide">Terminés</div>
+                </div>
+            </div>
+
+            <!-- Real-time notification banner -->
+            <div id="live-banner" class="hidden mb-6 bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 rounded-2xl shadow-lg flex items-center justify-between animate-pulse">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                        <i class="fa-solid fa-bell text-lg"></i>
+                    </div>
+                    <div>
+                        <p class="font-bold">Nouveau rendez-vous reçu !</p>
+                        <p class="text-sm text-blue-100" id="live-banner-text">Un patient vient de réserver</p>
+                    </div>
+                </div>
+                <button onclick="dismissLiveBanner()" class="text-white/80 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <div class="grid gap-4" id="schedule-list">
+                <div class="skeleton h-24 w-full"></div>
+                <div class="skeleton h-24 w-full"></div>
+                <div class="skeleton h-24 w-full"></div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Profile -->
+        <div id="view-profile" class="hidden">
+            <div class="max-w-2xl mx-auto bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl flex items-center justify-center text-2xl font-bold shadow-lg">
+                        <i class="fa-solid fa-user-doctor"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-800">Mon Profil Professionnel</h3>
+                        <p class="text-sm text-slate-500">Mettez à jour vos informations visibles par les patients</p>
+                    </div>
+                </div>
+
+                <form id="profile-form" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">Spécialité</label>
+                            <input type="text" id="specialization" required 
+                                   class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition bg-slate-50"
+                                   placeholder="Ex: Cardiologue">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">Frais de Consultation (FCFA)</label>
+                            <input type="number" id="consultation_fee" required min="0"
+                                   class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition bg-slate-50"
+                                   placeholder="Ex: 15000">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Biographie / Description</label>
+                        <textarea id="bio" rows="4" 
+                                  class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition bg-slate-50 resize-none"
+                                  placeholder="Décrivez votre expérience, vos domaines d'expertise..."></textarea>
+                        <p class="text-xs text-slate-400 mt-1">Cette description sera visible par les patients dans l'annuaire.</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Années d'expérience</label>
+                        <input type="number" id="experience_years" min="0" max="60"
+                               class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition bg-slate-50"
+                               placeholder="Ex: 10">
+                    </div>
+                    <button type="submit" id="profile-submit-btn" 
+                            class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        <span id="profile-btn-text">Enregistrer les modifications</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // ========== CONFIG ==========
+        const API_BASE = '';
+        let token = localStorage.getItem('token');
+        let currentUser = null;
+        let eventSource = null;
+        let hasNewAppointment = false;
+
+        // ========== AUTH CHECK ==========
+        if (!token) {
+            window.location.href = '/login';
+        }
+
+        // ========== API HELPERS ==========
+        async function apiGet(endpoint) {
+            const res = await fetch(`${API_BASE}${endpoint}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.status === 401) {
+                showToast('Session expirée. Reconnexion...', 'error');
+                setTimeout(logout, 1500);
+                throw new Error('Unauthorized');
+            }
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({ detail: 'Erreur serveur' }));
+                throw new Error(err.detail || `HTTP ${res.status}`);
+            }
+            return res.json();
+        }
+
+        async function apiPut(endpoint, body) {
+            const res = await fetch(`${API_BASE}${endpoint}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(body)
+            });
+            if (res.status === 401) {
+                showToast('Session expirée. Reconnexion...', 'error');
+                setTimeout(logout, 1500);
+                throw new Error('Unauthorized');
+            }
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({ detail: 'Erreur serveur' }));
+                throw new Error(err.detail || `HTTP ${res.status}`);
+            }
+            return res.json();
+        }
+
+        async function apiPatch(endpoint, body) {
+            const res = await fetch(`${API_BASE}${endpoint}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(body)
+            });
+            if (res.status === 401) {
+                showToast('Session expirée. Reconnexion...', 'error');
+                setTimeout(logout, 1500);
+                throw new Error('Unauthorized');
+            }
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({ detail: 'Erreur serveur' }));
+                throw new Error(err.detail || `HTTP ${res.status}`);
+            }
+            return res.json();
+        }
+
+        // ========== SSE (SERVER-SENT EVENTS) ==========
+        function connectSSE() {
+            if (eventSource) {
+                eventSource.close();
+            }
+
+            eventSource = new EventSource(`/events/doctor?token=${token}`);
+
+            eventSource.onopen = () => {
+                updateConnectionStatus(true);
+                console.log('🔌 SSE connected');
+            };
+
+            eventSource.onmessage = (event) => {
+                try {
+                    const msg = JSON.parse(event.data);
+                    handleSSEMessage(msg);
+                } catch (e) {
+                    console.error('SSE parse error:', e);
+                }
+            };
+
+            eventSource.onerror = (err) => {
+                updateConnectionStatus(false);
+                console.error('SSE error:', err);
+                // Auto-reconnect after 3 seconds
+                setTimeout(() => {
+                    if (eventSource.readyState === EventSource.CLOSED) {
+                        console.log('🔄 SSE reconnecting...');
+                        connectSSE();
+                    }
+                }, 3000);
+            };
+        }
+
+        function handleSSEMessage(msg) {
+            console.log('📨 SSE event:', msg.type, msg);
+
+            switch (msg.type) {
+                case 'connected':
+                    showToast('Connecté en temps réel 🟢');
+                    break;
+
+                case 'new_appointment':
+                    // Show notification
+                    showToast(`📅 Nouveau rendez-vous de ${msg.data.patient_name} !`, 'success');
+                    // Show banner
+                    showLiveBanner(`Nouveau rendez-vous de ${msg.data.patient_name}`);
+                    // Mark new badge
+                    hasNewAppointment = true;
+                    document.getElementById('new-badge').classList.remove('hidden');
+                    // Refresh schedule
+                    loadSchedule();
+                    break;
+
+                case 'status_update':
+                    // Another doctor/patient updated status — refresh to stay in sync
+                    loadSchedule();
+                    break;
+
+                case 'heartbeat':
+                    // Keep-alive, ignore
+                    break;
+
+                default:
+                    console.log('Unknown SSE event type:', msg.type);
+            }
+        }
+
+        function updateConnectionStatus(connected) {
+            const dot = document.getElementById('connection-dot');
+            const text = document.getElementById('connection-text');
+            const badge = document.getElementById('connection-status');
+
+            if (connected) {
+                dot.className = 'w-2 h-2 rounded-full bg-emerald-400 live-badge';
+                text.innerText = 'En direct';
+                badge.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-600 text-xs font-bold transition-all';
+            } else {
+                dot.className = 'w-2 h-2 rounded-full bg-red-400';
+                text.innerText = 'Déconnecté';
+                badge.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-50 text-red-600 text-xs font-bold transition-all';
+            }
+        }
+
+        function showLiveBanner(text) {
+            const banner = document.getElementById('live-banner');
+            document.getElementById('live-banner-text').innerText = text;
+            banner.classList.remove('hidden');
+            // Auto-dismiss after 10 seconds
+            setTimeout(() => {
+                if (!banner.classList.contains('hidden')) {
+                    dismissLiveBanner();
+                }
+            }, 10000);
+        }
+
+        function dismissLiveBanner() {
+            document.getElementById('live-banner').classList.add('hidden');
+        }
+
+        // ========== INIT ==========
+        async function init() {
+            if (!token) return;
+
+            // Connect SSE first for real-time updates
+            connectSSE();
+
+            // Load data independently
+            const promises = [
+                fetchUser().catch(e => console.error('fetchUser failed:', e)),
+                loadSchedule().catch(e => console.error('loadSchedule failed:', e)),
+                loadProfile().catch(e => console.error('loadProfile failed:', e))
+            ];
+            await Promise.allSettled(promises);
+        }
+
+        // ========== USER ==========
+        async function fetchUser() {
+            try {
+                const data = await apiGet('/me');
+                currentUser = data;
+                document.getElementById('user-name').innerText = data.full_name;
+                document.getElementById('welcome-name').innerText = data.full_name.split(' ')[0];
+            } catch (e) {
+                document.getElementById('user-name').innerText = 'Erreur de chargement';
+                throw e;
+            }
+        }
+
+        // ========== SCHEDULE ==========
+        async function loadSchedule() {
+            const list = document.getElementById('schedule-list');
+
+            try {
+                const appts = await apiGet('/appointments/my-schedule');
+
+                // Update stats
+                const stats = { total: 0, pending: 0, confirmed: 0, completed: 0 };
+                (appts || []).forEach(a => {
+                    stats.total++;
+                    if (a.status === 'pending') stats.pending++;
+                    if (a.status === 'confirmed') stats.confirmed++;
+                    if (a.status === 'completed') stats.completed++;
+                });
+                document.getElementById('stat-total').innerText = stats.total;
+                document.getElementById('stat-pending').innerText = stats.pending;
+                document.getElementById('stat-confirmed').innerText = stats.confirmed;
+                document.getElementById('stat-completed').innerText = stats.completed;
+
+                if (!appts || appts.length === 0) {
+                    list.innerHTML = `
+                        <div class="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-300">
+                            <div class="text-5xl mb-4">📅</div>
+                            <h3 class="text-lg font-bold text-slate-800 mb-2">Aucun rendez-vous prévu</h3>
+                            <p class="text-slate-500 max-w-md mx-auto">Votre planning est vide. Les rendez-vous apparaîtront ici lorsque les patients feront des réservations.</p>
+                        </div>`;
+                    return;
+                }
+
+                list.innerHTML = appts.map(appt => {
+                    const dateObj = new Date(appt.appointment_time);
+                    const dateStr = dateObj.toLocaleString('fr-FR', { 
+                        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+                    });
+
+                    const statusConfig = {
+                        'confirmed': { class: 'bg-emerald-100 text-emerald-700', label: 'Confirmé' },
+                        'completed': { class: 'bg-blue-100 text-blue-700', label: 'Terminé' },
+                        'cancelled': { class: 'bg-red-100 text-red-700', label: 'Annulé' },
+                        'pending': { class: 'bg-yellow-100 text-yellow-700', label: 'En attente' }
+                    };
+                    const status = statusConfig[appt.status] || { class: 'bg-slate-100 text-slate-700', label: appt.status };
+
+                    const isNew = appt.status === 'pending';
+                    const newIndicator = isNew ? '<span class="ml-2 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>' : '';
+
+                    const actionButtons = [];
+                    if (appt.status === 'pending') {
+                        actionButtons.push(`<button onclick="updateStatus(${appt.id}, 'confirmed')" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-emerald-700 transition shadow-sm"><i class="fa-solid fa-check mr-1"></i>Confirmer</button>`);
+                    }
+                    if (appt.status === 'confirmed') {
+                        actionButtons.push(`<button onclick="updateStatus(${appt.id}, 'completed')" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 transition shadow-sm"><i class="fa-solid fa-check-double mr-1"></i>Terminer</button>`);
+                    }
+                    actionButtons.push(`<button onclick="updateStatus(${appt.id}, 'cancelled')" class="bg-slate-100 text-slate-500 px-4 py-2 rounded-lg text-xs font-bold hover:bg-red-100 hover:text-red-600 transition"><i class="fa-solid fa-xmark mr-1"></i>Annuler</button>`);
+
+                    return `
+                    <div class="bg-white p-5 rounded-2xl border ${isNew ? 'border-blue-300 shadow-md' : 'border-slate-200'} flex flex-col md:flex-row md:items-center justify-between gap-4 hover:shadow-lg transition-all ${isNew ? 'pulse-ring' : ''}">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-gradient-to-br from-blue-50 to-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold shadow-sm">
+                                <i class="fa-solid fa-user"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-800 text-lg flex items-center">
+                                    ${appt.patient_name || 'Patient inconnu'}
+                                    ${newIndicator}
+                                </h4>
+                                <div class="flex items-center gap-2 text-sm text-slate-500 mt-0.5">
+                                    <i class="fa-regular fa-calendar text-blue-400"></i>
+                                    <span class="capitalize">${dateStr}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <span class="px-4 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-wider ${status.class}">${status.label}</span>
+                            <div class="flex gap-2">
+                                ${actionButtons.join('')}
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch (e) {
+                console.error('loadSchedule error:', e);
+                list.innerHTML = `
+                    <div class="text-center py-16 bg-white rounded-3xl border border-slate-200">
+                        <div class="text-5xl mb-4">⚠️</div>
+                        <h3 class="text-lg font-bold text-slate-700 mb-2">Erreur de chargement</h3>
+                        <p class="text-slate-500 mb-4">${e.message || 'Impossible de charger votre planning.'}</p>
+                        <button onclick="loadSchedule()" class="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-blue-700 transition">
+                            <i class="fa-solid fa-rotate-right mr-2"></i>Réessayer
+                        </button>
+                    </div>`;
+            }
+        }
+
+        async function updateStatus(id, status) {
+            try {
+                await apiPatch(`/appointments/${id}/status`, { status });
+                showToast(`Statut mis à jour : ${status}`);
+                await loadSchedule();
+            } catch (e) {
+                showToast(e.message || 'Erreur lors de la mise à jour', 'error');
+            }
+        }
+
+        // ========== PROFILE ==========
+        async function loadProfile() {
+            try {
+                const data = await apiGet('/doctor/profile');
+                document.getElementById('specialization').value = data.specialization || '';
+                document.getElementById('consultation_fee').value = data.consultation_fee || '';
+                document.getElementById('bio').value = data.bio || '';
+                document.getElementById('experience_years').value = data.experience_years || '';
+            } catch (e) {
+                console.error('loadProfile error:', e);
+                const form = document.getElementById('profile-form');
+                const errorDiv = document.createElement('div');
+                errorDiv.id = 'profile-error';
+                errorDiv.className = 'bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm font-medium mb-4';
+                errorDiv.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-2"></i>Impossible de charger votre profil. <button onclick="loadProfile()" class="underline font-bold">Réessayer</button>`;
+                if (!document.getElementById('profile-error')) {
+                    form.insertBefore(errorDiv, form.firstChild);
+                }
+            }
+        }
+
+        document.getElementById('profile-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('profile-submit-btn');
+            const btnText = document.getElementById('profile-btn-text');
+
+            const data = {
+                specialization: document.getElementById('specialization').value.trim(),
+                consultation_fee: parseInt(document.getElementById('consultation_fee').value) || 0,
+                bio: document.getElementById('bio').value.trim(),
+                experience_years: parseInt(document.getElementById('experience_years').value) || 0
+            };
+
+            const errDiv = document.getElementById('profile-error');
+            if (errDiv) errDiv.remove();
+
+            btn.disabled = true;
+            btnText.innerText = 'Enregistrement...';
+
+            try {
+                await apiPut('/doctor/profile', data);
+                showToast('Profil mis à jour avec succès ! ✅');
+            } catch (e) {
+                showToast(e.message || 'Erreur lors de la mise à jour', 'error');
+            } finally {
+                btn.disabled = false;
+                btnText.innerText = 'Enregistrer les modifications';
+            }
+        };
+
+        // ========== TABS ==========
+        function switchTab(tab) {
+            const schedView = document.getElementById('view-schedule');
+            const profView = document.getElementById('view-profile');
+            const schedTab = document.getElementById('tab-schedule');
+            const profTab = document.getElementById('tab-profile');
+
+            if (tab === 'schedule') {
+                schedView.classList.remove('hidden');
+                profView.classList.add('hidden');
+                schedTab.className = 'pb-4 px-2 text-sm font-bold border-b-2 border-blue-600 text-blue-600 transition';
+                profTab.className = 'pb-4 px-2 text-sm font-medium text-slate-500 hover:text-blue-600 transition';
+                // Clear new badge when viewing schedule
+                hasNewAppointment = false;
+                document.getElementById('new-badge').classList.add('hidden');
+                loadSchedule();
+            } else {
+                schedView.classList.add('hidden');
+                profView.classList.remove('hidden');
+                profTab.className = 'pb-4 px-2 text-sm font-bold border-b-2 border-blue-600 text-blue-600 transition';
+                schedTab.className = 'pb-4 px-2 text-sm font-medium text-slate-500 hover:text-blue-600 transition';
+            }
+        }
+
+        // ========== UTILS ==========
+        function logout() {
+            if (eventSource) {
+                eventSource.close();
+            }
+            localStorage.removeItem('token');
+            window.location.href = '/login';
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bgColor = type === 'success' ? 'bg-emerald-500' : 'bg-red-500';
+            const icon = type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation';
+
+            toast.className = `${bgColor} text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 toast-enter pointer-events-auto max-w-sm`;
+            toast.innerHTML = `<i class="fa-solid ${icon} text-lg"></i> <span class="font-semibold text-sm">${message}</span>`;
+
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.remove('toast-enter');
+                toast.classList.add('toast-exit');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // ========== CLEANUP ON PAGE UNLOAD ==========
+        window.addEventListener('beforeunload', () => {
+            if (eventSource) {
+                eventSource.close();
+            }
+        });
+
+        // ========== START ==========
+        init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: doctor_app_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-doctor}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-doctor_password}
+      POSTGRES_DB: ${POSTGRES_DB:-doctor_app_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-doctor} -d ${POSTGRES_DB:-doctor_app_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: doctor_app
+    restart: always
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-doctor}:${POSTGRES_PASSWORD:-doctor_password}@db:5432/${POSTGRES_DB:-doctor_app_db}
+      - SECRET_KEY=${SECRET_KEY:-dev-key-change-me}
+    networks:
+      - backend
+    # Uncomment for local dev hot-reload
+    # volumes:
+    #   - .:/app
+
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  postgres_data:
