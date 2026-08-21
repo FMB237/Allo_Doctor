@@ -1,9 +1,10 @@
         // ========== CONFIG ==========
         const API_BASE = '';
         let token = localStorage.getItem('token');
-        let currentUser = null;
-        let eventSource = null;
-        let hasNewAppointment = false;
+        function getToken(){ return localStorage.getItem('token'); }
+let currentUser = null;
+let eventSource = null;
+let hasNewAppointment = false;
 
         // ========== AUTH CHECK ==========
         if (!token) {
@@ -164,9 +165,9 @@
             document.getElementById('live-banner').classList.add('hidden');
         }
 
-        // ========== INIT ==========
+// ========== INIT ==========
         async function init() {
-            if (!token) return;
+            if (!getToken()) return;
 
             // Connect SSE first for real-time updates
             connectSSE();
@@ -403,6 +404,16 @@
             if (eventSource) {
                 eventSource.close();
             }
+        });
+
+        // Dark mode toggle
+        const darkToggle = document.getElementById('dark-toggle');
+        const htmlEl = document.documentElement;
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') htmlEl.classList.add('dark');
+        darkToggle?.addEventListener('click', () => {
+            htmlEl.classList.toggle('dark');
+            localStorage.setItem('theme', htmlEl.classList.contains('dark') ? 'dark' : 'light');
         });
 
         // ========== START ==========
