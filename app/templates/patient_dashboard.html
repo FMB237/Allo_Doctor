@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tableau de Bord Patient | Allo Doctor</title>
+    <script>
+        window.tailwind = window.tailwind || {};
+        window.tailwind.config = { darkMode: 'class' };
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -38,6 +42,13 @@
             from { transform: translateX(0); opacity: 1; }
             to { transform: translateX(100%); opacity: 0; }
         }
+        /* Dark mode overrides */
+        .dark body { background-color: #0b0f1a; color: #e5e7eb; }
+        .dark .glass-card { background: rgba(17, 24, 39, 0.85); border-color: rgba(55, 65, 81, 0.8); }
+        .dark .bg-white { background-color: #111827 !important; }
+        .dark .text-slate-900 { color: #f3f4f6 !important; }
+        .dark .text-slate-600 { color: #9ca3af !important; }
+        .dark .border-slate-200 { border-color: #374151 !important; }
     </style>
 <base target="_blank">
 </head>
@@ -55,6 +66,9 @@
                 </div>
                 <div class="flex items-center gap-4">
                     <span id="user-name" class="text-sm font-medium text-slate-600">Chargement...</span>
+                    <button id="dark-toggle" class="text-sm font-semibold text-slate-600 hover:text-slate-900 transition" title="Basculer le mode sombre">
+                        <i class="fa-solid fa-moon"></i>
+                    </button>
                     <button onclick="logout()" class="text-sm font-semibold text-red-500 hover:text-red-700 transition">Déconnexion</button>
                 </div>
             </div>
@@ -130,6 +144,17 @@
         </div>
     </div>
 
+    <script>
+        // Dark mode toggle
+        const darkToggle = document.getElementById('dark-toggle');
+        const htmlEl = document.documentElement;
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') htmlEl.classList.add('dark');
+        darkToggle?.addEventListener('click', () => {
+            htmlEl.classList.toggle('dark');
+            localStorage.setItem('theme', htmlEl.classList.contains('dark') ? 'dark' : 'light');
+        });
+    </script>
     <script src="/static/js/patient_dashboard.js"></script>
 </body>
 </html>
