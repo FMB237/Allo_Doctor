@@ -32,12 +32,16 @@ async def register(user_data: schemas.UserCreate, db: AsyncSession = Depends(get
     if user_role == models.UserRole.DOCTOR:
         if not user_data.specialization:
             raise HTTPException(status_code=400, detail="Specialization is required for doctors")
-        doctor_profile = models.DoctorProfile(
-            user_id=new_user.id,
-            specialization=user_data.specialization,
-            bio="New doctor profile"
-        )
-        db.add(doctor_profile)
+        # Avoid duplicate profile if it already exists
+        result = await db.execute(select(models.DoctorProfile).where(models.DoctorProfile.user_id == new_user.id))
+        existing = result.scalar_one_or_none()
+        if not existing:
+            doctor_profile = models.DoctorProfile(
+                user_id=new_user.id,
+                specialization=user_data.specialization,
+                bio="New doctor profile"
+            )
+            db.add(doctor_profile)
 
     await db.commit()
     await db.refresh(new_user)
