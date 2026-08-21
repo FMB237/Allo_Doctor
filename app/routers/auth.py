@@ -45,7 +45,8 @@ async def register(user_data: schemas.UserCreate, db: AsyncSession = Depends(get
 
     await db.commit()
     await db.refresh(new_user)
-    return {"message": "User registered successfully", "user_id": new_user.id, "role": new_user.role}
+    access_token = create_access_token(data={"sub": new_user.email, "role": new_user.role})
+    return {"message": "User registered successfully", "user_id": new_user.id, "role": new_user.role, "access_token": access_token}
 
 @router.post("/login")
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
