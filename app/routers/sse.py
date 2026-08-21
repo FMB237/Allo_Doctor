@@ -1,22 +1,32 @@
 import asyncio
 import json
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.database import get_db
 from app import models
-from app.auth_utils import get_current_user
+from app.auth_utils import decode_access_token
 from app.sse_manager import sse_manager
 
 router = APIRouter()
 
 @router.get("/events/doctor")
 async def doctor_events_stream(
-    current_user: models.User = Depends(get_current_user),
+    token: str = Query(...),
     db: AsyncSession = Depends(get_db)
 ):
+    payload = decode_access_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    email = payload.get("sub")
+    if not email:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    result = await db.execute(select(models.User).where(models.User.email == email))
+    current_user = result.scalar_one_or_none()
+    if not current_user:
+        raise HTTPException(status_code=401, detail="User not found")
     if current_user.role != models.UserRole.DOCTOR.value:
         raise HTTPException(status_code=403, detail="Only doctors can access this stream")
 

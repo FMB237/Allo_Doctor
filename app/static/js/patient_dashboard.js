@@ -1,13 +1,56 @@
-// Patient Dashboard - page specific logic
-requireAuth();
+        // ========== CONFIG ==========
+        const API_BASE = ''; // Same origin
+        let token = localStorage.getItem('token');
+        let currentUser = null;
+        let doctorsCache = [];
+        let searchTimeout = null;
 
-let currentUser = null;
-let doctorsCache = [];
-let searchTimeout = null;
+        // ========== AUTH CHECK ==========
+        if (!token) {
+            window.location.href = '/login';
+        }
 
-// ========== INIT ==========
+        // ========== API HELPERS ==========
+        async function apiGet(endpoint) {
+            const res = await fetch(`${API_BASE}${endpoint}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.status === 401) {
+                showToast('Session expirée. Reconnexion...', 'error');
+                setTimeout(logout, 1500);
+                throw new Error('Unauthorized');
+            }
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({ detail: 'Erreur serveur' }));
+                throw new Error(err.detail || `HTTP ${res.status}`);
+            }
+            return res.json();
+        }
+
+        async function apiPost(endpoint, body) {
+            const res = await fetch(`${API_BASE}${endpoint}`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` 
+                },
+                body: JSON.stringify(body)
+            });
+            if (res.status === 401) {
+                showToast('Session expirée. Reconnexion...', 'error');
+                setTimeout(logout, 1500);
+                throw new Error('Unauthorized');
+            }
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({ detail: 'Erreur serveur' }));
+                throw new Error(err.detail || `HTTP ${res.status}`);
+            }
+            return res.json();
+        }
+
+        // ========== INIT ==========
         async function init() {
-            requireAuth();
+            if (!token) return;
 
             // Run all independently so one failure doesn't block others
             const promises = [
@@ -239,6 +282,27 @@ let searchTimeout = null;
         }
 
         // ========== UTILS ==========
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = '/login';
+        }
 
-// ========== START ==========
-init();
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bgColor = type === 'success' ? 'bg-emerald-500' : 'bg-red-500';
+            const icon = type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation';
+
+            toast.className = `${bgColor} text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 toast-enter pointer-events-auto max-w-sm`;
+            toast.innerHTML = `<i class="fa-solid ${icon} text-lg"></i> <span class="font-semibold text-sm">${message}</span>`;
+
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.remove('toast-enter');
+                toast.classList.add('toast-exit');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // ========== START ==========
+        init();
