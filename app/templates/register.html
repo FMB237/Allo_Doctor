@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inscription | Allo Doctor</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>body { font-family: 'Plus Jakarta Sans', sans-serif; }</style>
 </head>
@@ -27,7 +28,12 @@
             </div>
             <div>
                 <label class="block text-sm font-semibold text-slate-700 mb-1">Mot de passe</label>
-                <input type="password" id="password" required class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition">
+                <div class="relative">
+                    <input type="password" id="password" required class="w-full px-4 py-3 pr-12 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition">
+                    <button type="button" id="toggle-password-reg" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700">
+                        <i class="fa-solid fa-eye"></i>
+                    </button>
+                </div>
             </div>
             <div class="grid grid-cols-2 gap-4">
                 <div>
@@ -39,7 +45,21 @@
                 </div>
                 <div id="spec-container" class="hidden">
                     <label class="block text-sm font-semibold text-slate-700 mb-1">Spécialité</label>
-                    <input type="text" id="specialization" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition">
+                    <select id="specialization" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition">
+                        <option value="">-- Choisir une spécialité --</option>
+                        <option value="Médecine Générale">Médecine Générale</option>
+                        <option value="Cardiologie">Cardiologie</option>
+                        <option value="Dermatologie">Dermatologie</option>
+                        <option value="Pédiatrie">Pédiatrie</option>
+                        <option value="Neurologie">Neurologie</option>
+                        <option value="Orthopédie">Orthopédie</option>
+                        <option value="Gynécologie-Obstétrique">Gynécologie-Obstétrique</option>
+                        <option value="Psychiatrie">Psychiatrie</option>
+                        <option value="Ophtalmologie">Ophtalmologie</option>
+                        <option value="Oto-Rhino-Laryngologie">Oto-Rhino-Laryngologie</option>
+                        <option value="Urologie">Urologie</option>
+                        <option value="Chirurgie Générale">Chirurgie Générale</option>
+                    </select>
                 </div>
             </div>
             <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-200">
@@ -144,6 +164,17 @@
                 btn.innerText = originalText;
             }
         };
+
+        // Password visibility toggle for register
+        const toggleRegBtn = document.getElementById('toggle-password-reg');
+        const pwdRegInput = document.getElementById('password');
+        if (toggleRegBtn && pwdRegInput) {
+            toggleRegBtn.addEventListener('click', () => {
+                const isPassword = pwdRegInput.type === 'password';
+                pwdRegInput.type = isPassword ? 'text' : 'password';
+                toggleRegBtn.innerHTML = isPassword ? '<i class="fa-solid fa-eye-slash"></i>' : '<i class="fa-solid fa-eye"></i>';
+            });
+        }
     </script>
 </body>
 </html>
