@@ -73,3 +73,28 @@ async def read_users_me(current_user: models.User = Depends(get_current_user)):
         "email": current_user.email,
         "role": current_user.role
     }
+
+@router.post("/forgot-password/verify")
+async def verify_email(payload: dict, db: AsyncSession = Depends(get_db)):
+    email = payload.get("email")
+    if not email:
+        raise HTTPException(status_code=400, detail="Email required")
+    result = await db.execute(select(models.User).where(models.User.email == email))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="Email not found")
+    return {"message": "Email verified"}
+
+@router.post("/reset-password")
+async def reset_password(payload: dict, db: AsyncSession = Depends(get_db)):
+    email = payload.get("email")
+    new_password = payload.get("new_password")
+    if not email or not new_password:
+        raise HTTPException(status_code=400, detail="Email and new password required")
+    result = await db.execute(select(models.User).where(models.User.email == email))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="Email not found")
+    user.hashed_password = hash_password(new_password)
+    await db.commit()
+    return {"message": "Password reset successful"}

@@ -32,3 +32,11 @@ async def patient_dashboard(request: Request):
 @router.get("/doctor/dashboard", response_class=HTMLResponse)
 async def doctor_dashboard(request: Request):
     return templates.TemplateResponse(request=request, name="doctor_dashboard.html", context={})
+
+@router.get("/forgot-password", response_class=HTMLResponse)
+async def forgot_password_page(request: Request):
+    return templates.TemplateResponse(request=request, name="email_verification.html")
+
+@router.get("/reset-password", response_class=HTMLResponse)
+async def reset_password_page(request: Request):
+    return templates.TemplateResponse(request=request, name="password_reset.html")
