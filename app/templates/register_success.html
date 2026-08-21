@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inscription réussie | Allo Doctor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>body { font-family: 'Plus Jakarta Sans', sans-serif; }</style>
+</head>
+<body class="bg-slate-50 flex items-center justify-center min-h-screen p-4">
+    <div class="max-w-md w-full bg-white rounded-3xl shadow-xl p-10 border border-slate-100 text-center">
+        <div class="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl">
+            ✅
+        </div>
+        <h1 class="text-3xl font-extrabold text-slate-900 mb-3">Compte créé avec succès !</h1>
+        <p class="text-slate-600 mb-8">Votre compte Allo Doctor a été créé. Vous pouvez maintenant accéder à votre tableau de bord.</p>
+        <a id="dashboard-btn" href="/login" class="inline-block w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-200">
+            Accéder au tableau de bord
+        </a>
+        <p class="text-sm text-slate-500 mt-6">Vous allez être redirigé automatiquement...</p>
+    </div>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const role = params.get('role');
+        const dashboardUrl = role === 'doctor' ? '/doctor/dashboard' : '/patient/dashboard';
+        const btn = document.getElementById('dashboard-btn');
+        btn.href = dashboardUrl;
+        setTimeout(() => { window.location.href = dashboardUrl; }, 5000);
+    </script>
+</body>
+</html>

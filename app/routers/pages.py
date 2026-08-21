@@ -21,6 +21,10 @@ async def login_page(request: Request):
 async def register_page(request: Request):
     return templates.TemplateResponse(request=request, name="register.html")
 
+@router.get("/register/success", response_class=HTMLResponse)
+async def register_success(request: Request):
+    return templates.TemplateResponse(request=request, name="register_success.html")
+
 @router.get("/patient/dashboard", response_class=HTMLResponse)
 async def patient_dashboard(request: Request):
     return templates.TemplateResponse(request=request, name="patient_dashboard.html")
