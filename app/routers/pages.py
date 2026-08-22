@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Depends
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from app.auth_utils import get_current_user, require_admin
+from app import models
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -32,6 +34,10 @@ async def patient_dashboard(request: Request):
 @router.get("/doctor/dashboard", response_class=HTMLResponse)
 async def doctor_dashboard(request: Request):
     return templates.TemplateResponse(request=request, name="doctor_dashboard.html", context={})
+
+@router.get("/admin/dashboard", response_class=HTMLResponse)
+async def admin_dashboard(request: Request, admin_user: models.User = Depends(require_admin)):
+    return templates.TemplateResponse(request=request, name="admin_dashboard.html", context={"user": admin_user})
 
 @router.get("/forgot-password", response_class=HTMLResponse)
 async def forgot_password_page(request: Request):
