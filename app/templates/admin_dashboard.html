@@ -86,6 +86,9 @@
             <button onclick="switchTab('appointments')" id="tab-appointments" class="pb-4 px-2 text-sm font-medium text-slate-500 hover:text-red-600 whitespace-nowrap">
                 <i class="fa-solid fa-calendar-check mr-2"></i>Rendez-vous
             </button>
+            <button onclick="switchTab('audit')" id="tab-audit" class="pb-4 px-2 text-sm font-medium text-slate-500 hover:text-red-600 whitespace-nowrap">
+                <i class="fa-solid fa-clipboard-list mr-2"></i>Audit
+            </button>
         </div>
 
         <!-- Overview -->
@@ -124,6 +127,7 @@
                     <h3 class="font-bold text-lg">Gestion des utilisateurs</h3>
                     <div class="flex gap-2">
                         <input id="user-search" placeholder="Rechercher..." class="px-3 py-2 rounded-lg border border-slate-200 text-sm w-64">
+                        <a href="/api/admin/users/export" class="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 text-center">Exporter CSV</a>
                         <button onclick="openBulkImportModal()" class="px-4 py-2 rounded-lg bg-slate-700 text-white text-sm font-semibold hover:bg-slate-800">Importer CSV</button>
                         <button onclick="openCreateUserModal()" class="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700">+ Nouvel utilisateur</button>
                     </div>
@@ -174,6 +178,31 @@
                         </thead>
                         <tbody id="appointments-table" class="divide-y">
                             <tr><td colspan="5" class="py-8 text-center text-slate-400">Chargement...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Audit Logs -->
+        <div id="view-audit" class="hidden">
+            <div class="bg-white rounded-2xl border border-slate-200 p-6">
+                <h3 class="font-bold text-lg mb-4">Journal d'audit</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="text-left text-slate-500 border-b">
+                            <tr>
+                                <th class="py-2">Date</th>
+                                <th>Admin ID</th>
+                                <th>Action</th>
+                                <th>Cible</th>
+                                <th>ID Cible</th>
+                                <th>IP</th>
+                                <th>Changements</th>
+                            </tr>
+                        </thead>
+                        <tbody id="audit-table" class="divide-y">
+                            <tr><td colspan="7" class="py-8 text-center text-slate-400">Chargement...</td></tr>
                         </tbody>
                     </table>
                 </div>

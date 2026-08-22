@@ -64,7 +64,7 @@ applyDarkMode();
 
 // ========== TABS ==========
 function switchTab(tab){
-    ['overview','users','doctors','appointments'].forEach(t=>{
+    ['overview','users','doctors','appointments','audit'].forEach(t=>{
         document.getElementById('view-'+t).classList.toggle('hidden', t!==tab);
         const btn = document.getElementById('tab-'+t);
         btn.classList.toggle('border-red-600', t===tab);
@@ -76,6 +76,7 @@ function switchTab(tab){
     if(tab==='doctors') loadDoctors();
     if(tab==='appointments') loadAppointments();
     if(tab==='overview') loadOverview();
+    if(tab==='audit') loadAudit();
 }
 
 // ========== INIT ==========
@@ -295,6 +296,29 @@ async function updateApptStatus(id, status){
         showToast('Statut mis à jour','success');
         loadAppointments();
     }catch(err){ showToast(err.message,'error'); }
+}
+
+// ========== AUDIT ==========
+async function loadAudit(){
+    const tbody = document.getElementById('audit-table');
+    tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center">Chargement...</td></tr>';
+    try{
+        const logs = await apiGet('/api/admin/audit-logs');
+        tbody.innerHTML = '';
+        logs.forEach(l=>{
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="py-2 text-xs">${new Date(l.created_at).toLocaleString('fr-FR')}</td>
+                <td class="text-xs">${l.admin_user_id}</td>
+                <td class="text-xs capitalize">${l.action}</td>
+                <td class="text-xs">${l.target_type}</td>
+                <td class="text-xs">${l.target_id ?? '-'}</td>
+                <td class="text-xs">${l.ip_address ?? '-'}</td>
+                <td class="text-xs max-w-xs truncate" title="${l.changes_json ?? ''}">${l.changes_json ? JSON.stringify(l.changes_json).slice(0,80) : '-'}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }catch(e){ showToast('Erreur chargement audit','error'); }
 }
 
 // ========== START ==========
