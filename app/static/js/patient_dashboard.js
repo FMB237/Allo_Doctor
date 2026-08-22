@@ -59,6 +59,7 @@
                 loadMyAppointments().catch(e => console.error('loadMyAppointments failed:', e))
             ];
             await Promise.allSettled(promises);
+            checkReminders();
         }
 
         // ========== USER ==========
@@ -78,9 +79,15 @@
         async function loadDoctors() {
             const grid = document.getElementById('doctors-grid');
             const specialty = document.getElementById('search-specialty').value.trim();
+            const maxFee = document.getElementById('filter-max-fee').value.trim();
+            const minExp = document.getElementById('filter-min-exp').value.trim();
 
             try {
-                const url = specialty ? `/doctors?specialization=${encodeURIComponent(specialty)}` : '/doctors';
+                const params = new URLSearchParams();
+                if (specialty) params.append('specialization', specialty);
+                if (maxFee) params.append('max_fee', maxFee);
+                if (minExp) params.append('min_experience', minExp);
+                const url = '/doctors?' + params.toString();
                 const doctors = await fetch(url).then(r => r.json());
                 doctorsCache = doctors;
 
@@ -302,6 +309,25 @@
                 toast.classList.add('toast-exit');
                 setTimeout(() => toast.remove(), 300);
             }, 4000);
+        }
+
+        // ========== REMINDERS ==========
+        async function checkReminders() {
+            try {
+                const appts = await apiGet('/appointments/my-appointments');
+                const now = new Date();
+                const in24h = new Date(now.getTime() + 24*60*60*1000);
+                const upcoming = appts.filter(a => {
+                    const t = new Date(a.appointment_time);
+                    return t > now && t <= in24h && a.status !== 'cancelled';
+                });
+                if (upcoming.length > 0) {
+                    upcoming.forEach(a => {
+                        const t = new Date(a.appointment_time).toLocaleString('fr-FR');
+                        showToast(`Rappel: Rendez-vous avec Dr ${a.doctor_name} le ${t}`, 'success');
+                    });
+                }
+            } catch(e){ console.error('checkReminders failed', e); }
         }
 
         // ========== START ==========

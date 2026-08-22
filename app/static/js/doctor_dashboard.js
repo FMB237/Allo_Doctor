@@ -14,7 +14,7 @@ let hasNewAppointment = false;
         // ========== API HELPERS ==========
         async function apiGet(endpoint) {
             const res = await fetch(`${API_BASE}${endpoint}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: { 'Authorization': `Bearer ${getToken()}` }
             });
             if (res.status === 401) {
                 showToast('Session expirée. Reconnexion...', 'error');
@@ -31,8 +31,43 @@ let hasNewAppointment = false;
         async function apiPut(endpoint, body) {
             const res = await fetch(`${API_BASE}${endpoint}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
                 body: JSON.stringify(body)
+            });
+            if (res.status === 401) {
+                showToast('Session expirée. Reconnexion...', 'error');
+                setTimeout(logout, 1500);
+                throw new Error('Unauthorized');
+            }
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({ detail: 'Erreur serveur' }));
+                throw new Error(err.detail || `HTTP ${res.status}`);
+            }
+            return res.json();
+        }
+
+        async function apiPost(endpoint, body) {
+            const res = await fetch(`${API_BASE}${endpoint}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
+                body: JSON.stringify(body)
+            });
+            if (res.status === 401) {
+                showToast('Session expirée. Reconnexion...', 'error');
+                setTimeout(logout, 1500);
+                throw new Error('Unauthorized');
+            }
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({ detail: 'Erreur serveur' }));
+                throw new Error(err.detail || `HTTP ${res.status}`);
+            }
+            return res.json();
+        }
+
+        async function apiDelete(endpoint) {
+            const res = await fetch(`${API_BASE}${endpoint}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${getToken()}` }
             });
             if (res.status === 401) {
                 showToast('Session expirée. Reconnexion...', 'error');
@@ -49,7 +84,7 @@ let hasNewAppointment = false;
         async function apiPatch(endpoint, body) {
             const res = await fetch(`${API_BASE}${endpoint}`, {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
                 body: JSON.stringify(body)
             });
             if (res.status === 401) {
@@ -349,27 +384,77 @@ let hasNewAppointment = false;
             }
         };
 
+        // ========== AVAILABILITY ==========
+        async function loadAvailability() {
+            const list = document.getElementById('availability-list');
+            list.innerHTML = '<div class="skeleton h-12 w-full"></div>';
+            try {
+                const slots = await apiGet('/doctor/availability');
+                const days = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
+                if (!slots.length) {
+                    list.innerHTML = '<p class="text-slate-500 text-sm">Aucune disponibilité définie.</p>';
+                    return;
+                }
+                list.innerHTML = slots.map(s => `
+                    <div class="flex items-center justify-between p-4 border border-slate-200 rounded-xl">
+                        <div>
+                            <div class="font-semibold">${days[s.day_of_week]} ${s.start_time} - ${s.end_time}</div>
+                            <div class="text-xs text-slate-500">${s.is_available ? 'Disponible' : 'Indisponible'}</div>
+                        </div>
+                        <button onclick="deleteAvailability(${s.id})" class="text-red-600 hover:underline text-sm">Supprimer</button>
+                    </div>
+                `).join('');
+            } catch(e) {
+                showToast('Erreur chargement disponibilités','error');
+            }
+        }
+        document.getElementById('availability-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const day = document.getElementById('avail-day').value;
+            const start = document.getElementById('avail-start').value;
+            const end = document.getElementById('avail-end').value;
+            if (!start || !end) { showToast('Heures requises','error'); return; }
+            try {
+                await apiPost('/doctor/availability', {day_of_week: day, start_time: start, end_time: end});
+                showToast('Disponibilité ajoutée');
+                e.target.reset();
+                loadAvailability();
+            } catch(err) { showToast(err.message,'error'); }
+        };
+        async function deleteAvailability(id) {
+            if (!confirm('Supprimer ce créneau ?')) return;
+            try {
+                await apiDelete(`/doctor/availability/${id}`);
+                showToast('Créneau supprimé');
+                loadAvailability();
+            } catch(err) { showToast(err.message,'error'); }
+        }
+
         // ========== TABS ==========
         function switchTab(tab) {
-            const schedView = document.getElementById('view-schedule');
-            const profView = document.getElementById('view-profile');
-            const schedTab = document.getElementById('tab-schedule');
-            const profTab = document.getElementById('tab-profile');
-
+            const views = {
+                schedule: document.getElementById('view-schedule'),
+                profile: document.getElementById('view-profile'),
+                availability: document.getElementById('view-availability')
+            };
+            const tabs = {
+                schedule: document.getElementById('tab-schedule'),
+                profile: document.getElementById('tab-profile'),
+                availability: document.getElementById('tab-availability')
+            };
+            Object.keys(views).forEach(k => {
+                views[k].classList.toggle('hidden', k !== tab);
+                const active = k === tab;
+                tabs[k].className = active
+                    ? 'pb-4 px-2 text-sm font-bold border-b-2 border-blue-600 text-blue-600 transition'
+                    : 'pb-4 px-2 text-sm font-medium text-slate-500 hover:text-blue-600 transition';
+            });
             if (tab === 'schedule') {
-                schedView.classList.remove('hidden');
-                profView.classList.add('hidden');
-                schedTab.className = 'pb-4 px-2 text-sm font-bold border-b-2 border-blue-600 text-blue-600 transition';
-                profTab.className = 'pb-4 px-2 text-sm font-medium text-slate-500 hover:text-blue-600 transition';
-                // Clear new badge when viewing schedule
                 hasNewAppointment = false;
                 document.getElementById('new-badge').classList.add('hidden');
                 loadSchedule();
-            } else {
-                schedView.classList.add('hidden');
-                profView.classList.remove('hidden');
-                profTab.className = 'pb-4 px-2 text-sm font-bold border-b-2 border-blue-600 text-blue-600 transition';
-                schedTab.className = 'pb-4 px-2 text-sm font-medium text-slate-500 hover:text-blue-600 transition';
+            } else if (tab === 'availability') {
+                loadAvailability();
             }
         }
 

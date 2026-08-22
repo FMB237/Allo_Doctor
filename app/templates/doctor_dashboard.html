@@ -109,6 +109,9 @@
             <button onclick="switchTab('profile')" id="tab-profile" class="pb-4 px-2 text-sm font-medium text-slate-500 hover:text-blue-600 transition">
                 <i class="fa-solid fa-user-gear mr-2"></i>Mon Profil
             </button>
+            <button onclick="switchTab('availability')" id="tab-availability" class="pb-4 px-2 text-sm font-medium text-slate-500 hover:text-blue-600 transition">
+                <i class="fa-solid fa-clock mr-2"></i>Disponibilités
+            </button>
         </div>
 
         <!-- Tab 1: Schedule -->
@@ -156,7 +159,30 @@
             </div>
         </div>
 
-        <!-- Tab 2: Profile -->
+        <!-- Tab 2: Availability -->
+        <div id="view-availability" class="hidden">
+            <div class="max-w-3xl mx-auto bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+                <h3 class="text-xl font-bold text-slate-800 mb-2">Gestion des disponibilités</h3>
+                <p class="text-sm text-slate-500 mb-6">Définissez vos créneaux récurrents. Les patients pourront réserver uniquement pendant ces plages.</p>
+                <form id="availability-form" class="flex gap-3 mb-6">
+                    <select id="avail-day" class="px-4 py-3 rounded-xl border border-slate-200">
+                        <option value="0">Lundi</option>
+                        <option value="1">Mardi</option>
+                        <option value="2">Mercredi</option>
+                        <option value="3">Jeudi</option>
+                        <option value="4">Vendredi</option>
+                        <option value="5">Samedi</option>
+                        <option value="6">Dimanche</option>
+                    </select>
+                    <input id="avail-start" type="time" class="px-4 py-3 rounded-xl border border-slate-200">
+                    <input id="avail-end" type="time" class="px-4 py-3 rounded-xl border border-slate-200">
+                    <button type="submit" class="px-4 py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700">Ajouter</button>
+                </form>
+                <div id="availability-list" class="space-y-3"></div>
+            </div>
+        </div>
+
+        <!-- Tab 3: Profile -->
         <div id="view-profile" class="hidden">
             <div class="max-w-2xl mx-auto bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
                 <div class="flex items-center gap-4 mb-8">

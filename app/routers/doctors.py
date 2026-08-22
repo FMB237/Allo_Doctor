@@ -64,10 +64,14 @@ async def update_doctor_profile(
     }
 
 @router.get("/doctors")
-async def list_doctors(specialization: str = None, db: AsyncSession = Depends(get_db)):
+async def list_doctors(specialization: str = None, max_fee: int = None, min_experience: int = None, db: AsyncSession = Depends(get_db)):
     query = select(models.DoctorProfile).options(joinedload(models.DoctorProfile.user))
     if specialization:
         query = query.where(models.DoctorProfile.specialization.ilike(f"%{specialization}%"))
+    if max_fee is not None:
+        query = query.where(models.DoctorProfile.consultation_fee <= max_fee)
+    if min_experience is not None:
+        query = query.where(models.DoctorProfile.experience_years >= min_experience)
     
     result = await db.execute(query)
     profiles = result.scalars().all()
@@ -82,3 +86,38 @@ async def list_doctors(specialization: str = None, db: AsyncSession = Depends(ge
         } 
         for p in profiles
     ]
+
+@router.get("/doctor/availability")
+async def get_availability(current_user: models.User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    if current_user.role != models.UserRole.DOCTOR.value:
+        raise HTTPException(status_code=403, detail="Only doctors")
+    result = await db.execute(select(models.DoctorAvailability).where(models.DoctorAvailability.doctor_user_id == current_user.id).order_by(models.DoctorAvailability.day_of_week, models.DoctorAvailability.start_time))
+    slots = result.scalars().all()
+    return [{"id": s.id, "day_of_week": s.day_of_week, "start_time": s.start_time, "end_time": s.end_time, "is_available": s.is_available} for s in slots]
+
+@router.post("/doctor/availability")
+async def add_availability(payload: dict, current_user: models.User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    if current_user.role != models.UserRole.DOCTOR.value:
+        raise HTTPException(status_code=403, detail="Only doctors")
+    day = payload.get("day_of_week")
+    start = payload.get("start_time")
+    end = payload.get("end_time")
+    if day is None or not start or not end:
+        raise HTTPException(status_code=400, detail="day_of_week, start_time, end_time required")
+    slot = models.DoctorAvailability(doctor_user_id=current_user.id, day_of_week=int(day), start_time=start, end_time=end, is_available=True)
+    db.add(slot)
+    await db.commit()
+    await db.refresh(slot)
+    return {"message": "Availability added", "id": slot.id}
+
+@router.delete("/doctor/availability/{slot_id}")
+async def delete_availability(slot_id: int, current_user: models.User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    if current_user.role != models.UserRole.DOCTOR.value:
+        raise HTTPException(status_code=403, detail="Only doctors")
+    result = await db.execute(select(models.DoctorAvailability).where(models.DoctorAvailability.id == slot_id, models.DoctorAvailability.doctor_user_id == current_user.id))
+    slot = result.scalar_one_or_none()
+    if not slot:
+        raise HTTPException(status_code=404, detail="Slot not found")
+    await db.delete(slot)
+    await db.commit()
+    return {"message": "Availability deleted"}
