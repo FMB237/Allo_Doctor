@@ -65,14 +65,8 @@
                 if (res.ok) {
                     const data = await res.json();
                     localStorage.setItem('token', data.access_token);
-                    const role = data.user.role;
-                    if (role === 'doctor') {
-                        window.location.href = '/doctor/dashboard';
-                    } else if (role === 'admin') {
-                        window.location.href = '/admin/dashboard';
-                    } else {
-                        window.location.href = '/patient/dashboard';
-                    }
+                    // Server decides where to go based on role
+                    window.location.href = '/auth/redirect';
                 } else {
                     alert('Email ou mot de passe incorrect');
                 }
