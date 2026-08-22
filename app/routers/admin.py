@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 from app.database import get_db
 from app import models
 from app.auth_utils import require_admin, hash_password
+import csv, io
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -76,6 +77,63 @@ async def create_user(payload: dict, db: AsyncSession = Depends(get_db), admin=D
     await db.commit()
     await db.refresh(new_user)
     return {"message": "User created", "user_id": new_user.id, "role": new_user.role}
+
+@router.post("/users/bulk")
+async def bulk_create_users(file: UploadFile = File(...), db: AsyncSession = Depends(get_db), admin=Depends(require_admin)):
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(status_code=400, detail="CSV file required")
+    content = await file.read()
+    text = content.decode('utf-8')
+    reader = csv.DictReader(io.StringIO(text))
+    created = 0
+    errors = []
+    for i, row in enumerate(reader, start=2):
+        try:
+            email = (row.get('email') or '').strip()
+            full_name = (row.get('full_name') or '').strip()
+            password = (row.get('password') or '').strip()
+            role = (row.get('role') or 'patient').strip().lower()
+            is_active = str(row.get('is_active','true')).strip().lower() in ('true','1','yes')
+            if not email or not full_name or not password:
+                errors.append(f"Ligne {i}: email, full_name et password requis")
+                continue
+            result = await db.execute(select(models.User).where(models.User.email == email))
+            if result.scalar_one_or_none():
+                errors.append(f"Ligne {i}: email déjà existant")
+                continue
+            try:
+                user_role = models.UserRole(role)
+            except ValueError:
+                errors.append(f"Ligne {i}: rôle invalide")
+                continue
+            new_user = models.User(
+                full_name=full_name,
+                email=email,
+                hashed_password=hash_password(password),
+                role=user_role.value,
+                is_active=is_active
+            )
+            db.add(new_user)
+            await db.flush()
+            if user_role == models.UserRole.DOCTOR:
+                specialization = (row.get('specialization') or '').strip()
+                if not specialization:
+                    errors.append(f"Ligne {i}: spécialité requise pour docteur")
+                    await db.rollback()
+                    continue
+                doctor_profile = models.DoctorProfile(
+                    user_id=new_user.id,
+                    specialization=specialization,
+                    bio=row.get('bio',''),
+                    experience_years=int(row.get('experience_years') or 0) or None,
+                    consultation_fee=int(row.get('consultation_fee') or 0) or None
+                )
+                db.add(doctor_profile)
+            created += 1
+        except Exception as e:
+            errors.append(f"Ligne {i}: {str(e)}")
+    await db.commit()
+    return {"created": created, "errors": errors}
 
 @router.put("/users/{user_id}")
 async def update_user(user_id: int, payload: dict, db: AsyncSession = Depends(get_db), admin=Depends(require_admin)):

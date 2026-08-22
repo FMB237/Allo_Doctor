@@ -174,6 +174,48 @@ document.getElementById('create-user-form')?.addEventListener('submit', async e=
         loadUsers();
     }catch(err){ showToast(err.message,'error'); }
 });
+
+// Bulk import
+function openBulkImportModal(){
+    document.getElementById('bulk-import-form').reset();
+    document.getElementById('bulk-preview').classList.add('hidden');
+    document.getElementById('bulk-import-modal').classList.remove('hidden');
+}
+function closeBulkImportModal(){ document.getElementById('bulk-import-modal').classList.add('hidden'); }
+document.getElementById('bulk-csv-file')?.addEventListener('change', e=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ev=>{
+        const text = ev.target.result;
+        const lines = text.split('\n').slice(0,6).join('\n');
+        document.querySelector('#bulk-preview div').textContent = lines;
+        document.getElementById('bulk-preview').classList.remove('hidden');
+    };
+    reader.readAsText(file);
+});
+document.getElementById('bulk-import-form')?.addEventListener('submit', async e=>{
+    e.preventDefault();
+    const fileInput = document.getElementById('bulk-csv-file');
+    const file = fileInput.files[0];
+    if(!file){ showToast('Sélectionnez un fichier CSV','error'); return; }
+    const formData = new FormData();
+    formData.append('file', file);
+    try{
+        const res = await fetch(`${API_BASE}/api/admin/users/bulk`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${getToken()}` },
+            body: formData
+        });
+        const data = await res.json();
+        if(!res.ok) throw new Error(data.detail || 'Erreur import');
+        showToast(`Importé: ${data.created} utilisateurs. Erreurs: ${data.errors.length}`,'success');
+        if(data.errors.length) console.warn(data.errors);
+        closeBulkImportModal();
+        loadUsers();
+    }catch(err){ showToast(err.message,'error'); }
+});
+
 document.getElementById('user-form')?.addEventListener('submit', async e=>{
     e.preventDefault();
     const id = document.getElementById('user-id').value;

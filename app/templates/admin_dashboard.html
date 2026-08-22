@@ -124,6 +124,7 @@
                     <h3 class="font-bold text-lg">Gestion des utilisateurs</h3>
                     <div class="flex gap-2">
                         <input id="user-search" placeholder="Rechercher..." class="px-3 py-2 rounded-lg border border-slate-200 text-sm w-64">
+                        <button onclick="openBulkImportModal()" class="px-4 py-2 rounded-lg bg-slate-700 text-white text-sm font-semibold hover:bg-slate-800">Importer CSV</button>
                         <button onclick="openCreateUserModal()" class="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700">+ Nouvel utilisateur</button>
                     </div>
                 </div>
@@ -270,6 +271,28 @@
                 <div class="flex justify-end gap-2 pt-2">
                     <button type="button" onclick="closeCreateUserModal()" class="px-4 py-2 rounded-lg border">Annuler</button>
                     <button type="submit" class="px-4 py-2 rounded-lg bg-red-600 text-white">Créer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bulk Import Modal -->
+    <div id="bulk-import-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-lg">
+            <h4 class="font-bold text-lg mb-4">Importer utilisateurs CSV</h4>
+            <p class="text-sm text-slate-500 mb-4">Colonnes requises: full_name,email,password,role. Optionnel: specialization,experience_years,consultation_fee,bio,is_active</p>
+            <form id="bulk-import-form" class="space-y-4">
+                <div>
+                    <label class="text-sm font-semibold">Fichier CSV</label>
+                    <input id="bulk-csv-file" type="file" accept=".csv" required class="w-full px-3 py-2 rounded-lg border border-slate-200 mt-1">
+                </div>
+                <div id="bulk-preview" class="hidden">
+                    <p class="text-sm font-semibold mb-2">Aperçu</p>
+                    <div class="max-h-40 overflow-auto border rounded-lg p-2 text-xs font-mono bg-slate-50 dark:bg-slate-800"></div>
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeBulkImportModal()" class="px-4 py-2 rounded-lg border">Annuler</button>
+                    <button type="submit" class="px-4 py-2 rounded-lg bg-slate-700 text-white">Importer</button>
                 </div>
             </form>
         </div>
