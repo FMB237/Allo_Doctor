@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, and_
 from sqlalchemy.orm import joinedload
-from datetime import datetime
-
+from datetime import datetime, time
 from app.database import get_db
 from app import models, schemas
 from app.auth_utils import get_current_user
@@ -24,6 +23,34 @@ async def book_appointment(
     if appointment_time_naive < datetime.now().replace(tzinfo=None):
         raise HTTPException(status_code=400, detail="Cannot book appointments in the past")
 
+    # 1. Check Doctor Availability (Working Hours)
+    day_of_week = appointment_time_naive.weekday()
+    appt_time = appointment_time_naive.time()
+    
+    avail_result = await db.execute(
+        select(models.DoctorAvailability).where(
+            models.DoctorAvailability.doctor_user_id == appointment_data.doctor_id,
+            models.DoctorAvailability.day_of_week == day_of_week,
+            models.DoctorAvailability.is_available == True
+        )
+    )
+    availabilities = avail_result.scalars().all()
+    
+    is_within_hours = False
+    for slot in availabilities:
+        start = time.fromisoformat(slot.start_time)
+        end = time.fromisoformat(slot.end_time)
+        if start <= appt_time <= end:
+            is_within_hours = True
+            break
+    
+    if not is_within_hours:
+        raise HTTPException(
+            status_code=400, 
+            detail="Le médecin n'est pas disponible à cet horaire. Veuillez choisir un créneau dans ses heures de travail."
+        )
+
+    # 2. Check for conflicts (Double booking)
     conflict = await db.execute(select(models.Appointment).where(
         models.Appointment.doctor_id == appointment_data.doctor_id,
         models.Appointment.appointment_time == appointment_time_naive,

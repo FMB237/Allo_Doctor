@@ -258,7 +258,10 @@ async def list_doctors(db: AsyncSession = Depends(get_db), admin=Depends(require
 async def list_appointments(db: AsyncSession = Depends(get_db), admin=Depends(require_admin)):
     result = await db.execute(
         select(models.Appointment)
-        .options(selectinload(models.Appointment.patient), selectinload(models.Appointment.doctor_profile))
+        .options(
+            selectinload(models.Appointment.patient),
+            selectinload(models.Appointment.doctor_profile).selectinload(models.DoctorProfile.user)
+        )
         .order_by(models.Appointment.appointment_time.desc())
     )
     appts = result.scalars().all()

@@ -90,3 +90,17 @@ class AuditLog(Base):
 
     def __repr__(self):
         return f"<AuditLog(id={self.id}, action={self.action})>"
+
+
+class DoctorAvailability(Base):
+    __tablename__ = "doctor_availability"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    doctor_user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    day_of_week: Mapped[int] = mapped_column(nullable=False)  # 0=Monday ... 6=Sunday
+    start_time: Mapped[str] = mapped_column(String, nullable=False)  # HH:MM
+    end_time: Mapped[str] = mapped_column(String, nullable=False)  # HH:MM
+    is_available: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    def __repr__(self):
+        return f"<DoctorAvailability(doctor={self.doctor_user_id}, day={self.day_of_week})>"
