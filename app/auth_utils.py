@@ -70,3 +70,9 @@ async def get_current_user(request: Request, db: AsyncSession = Depends(get_db))
     if user is None:
         raise credentials_exception
     return user
+
+# ========== Role-based dependencies ==========
+def require_admin(current_user: models.User = Depends(get_current_user)):
+    if current_user.role != models.UserRole.ADMIN.value:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+    return current_user

@@ -23,7 +23,9 @@
     <script>
         const params = new URLSearchParams(window.location.search);
         const role = params.get('role');
-        const dashboardUrl = role === 'doctor' ? '/doctor/dashboard' : '/patient/dashboard';
+        let dashboardUrl = '/patient/dashboard';
+        if (role === 'doctor') dashboardUrl = '/doctor/dashboard';
+        else if (role === 'admin') dashboardUrl = '/admin/dashboard';
         const btn = document.getElementById('dashboard-btn');
         btn.href = dashboardUrl;
         setTimeout(() => { window.location.href = dashboardUrl; }, 5000);

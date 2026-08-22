@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine, Base
-from app.routers import pages, auth, doctors, appointments, sse
+from app.routers import pages, auth, doctors, appointments, sse, admin
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -37,3 +37,4 @@ app.include_router(auth.router, tags=["Authentication"])
 app.include_router(doctors.router, tags=["Doctors"])
 app.include_router(appointments.router, tags=["Appointments"])
 app.include_router(sse.router, tags=["Real-time SSE"])
+app.include_router(admin.router, tags=["Admin"])
