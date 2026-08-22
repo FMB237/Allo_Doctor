@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -98,3 +99,13 @@ async def reset_password(payload: dict, db: AsyncSession = Depends(get_db)):
     user.hashed_password = hash_password(new_password)
     await db.commit()
     return {"message": "Password reset successful"}
+
+@router.get("/redirect")
+async def auth_redirect(current_user: models.User = Depends(get_current_user)):
+    role = current_user.role
+    if role == models.UserRole.ADMIN.value:
+        return RedirectResponse(url="/admin/dashboard", status_code=status.HTTP_303_SEE_OTHER)
+    elif role == models.UserRole.DOCTOR.value:
+        return RedirectResponse(url="/doctor/dashboard", status_code=status.HTTP_303_SEE_OTHER)
+    else:
+        return RedirectResponse(url="/patient/dashboard", status_code=status.HTTP_303_SEE_OTHER)

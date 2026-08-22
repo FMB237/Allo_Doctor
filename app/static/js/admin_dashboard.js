@@ -134,6 +134,46 @@ function openUserModal(user){
     document.getElementById('user-modal').classList.remove('hidden');
 }
 function closeUserModal(){ document.getElementById('user-modal').classList.add('hidden'); }
+
+// Create user modal
+function openCreateUserModal(){
+    document.getElementById('create-user-form').reset();
+    document.getElementById('create-active').checked = true;
+    document.getElementById('doctor-fields').classList.add('hidden');
+    document.getElementById('create-user-modal').classList.remove('hidden');
+}
+function closeCreateUserModal(){ document.getElementById('create-user-modal').classList.add('hidden'); }
+// Toggle doctor fields
+document.getElementById('create-role')?.addEventListener('change', e=>{
+    document.getElementById('doctor-fields').classList.toggle('hidden', e.target.value !== 'doctor');
+});
+document.getElementById('create-user-form')?.addEventListener('submit', async e=>{
+    e.preventDefault();
+    const payload = {
+        full_name: document.getElementById('create-fullname').value.trim(),
+        email: document.getElementById('create-email').value.trim(),
+        password: document.getElementById('create-password').value,
+        role: document.getElementById('create-role').value,
+        is_active: document.getElementById('create-active').checked
+    };
+    if(payload.role === 'doctor'){
+        payload.specialization = document.getElementById('create-specialization').value.trim();
+        payload.experience_years = document.getElementById('create-experience').value || null;
+        payload.consultation_fee = document.getElementById('create-fee').value || null;
+        payload.bio = document.getElementById('create-bio').value.trim();
+    }
+    try{
+        const res = await fetch(`${API_BASE}/api/admin/users`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
+            body: JSON.stringify(payload)
+        });
+        if(!res.ok){ const err = await res.json().catch(()=>({detail:'Erreur'})); throw new Error(err.detail); }
+        showToast('Utilisateur créé avec succès','success');
+        closeCreateUserModal();
+        loadUsers();
+    }catch(err){ showToast(err.message,'error'); }
+});
 document.getElementById('user-form')?.addEventListener('submit', async e=>{
     e.preventDefault();
     const id = document.getElementById('user-id').value;

@@ -4,7 +4,7 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 from app.database import get_db
 from app import models
-from app.auth_utils import require_admin
+from app.auth_utils import require_admin, hash_password
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -35,6 +35,47 @@ async def list_users(db: AsyncSession = Depends(get_db), admin=Depends(require_a
             "created_at": u.created_at.isoformat() if u.created_at else None
         } for u in users
     ]
+
+@router.post("/users")
+async def create_user(payload: dict, db: AsyncSession = Depends(get_db), admin=Depends(require_admin)):
+    email = payload.get("email")
+    full_name = payload.get("full_name")
+    password = payload.get("password")
+    role = payload.get("role", "patient")
+    is_active = payload.get("is_active", True)
+    if not email or not full_name or not password:
+        raise HTTPException(status_code=400, detail="email, full_name and password required")
+    result = await db.execute(select(models.User).where(models.User.email == email))
+    if result.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Email already registered")
+    try:
+        user_role = models.UserRole(role.lower())
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid role")
+    new_user = models.User(
+        full_name=full_name,
+        email=email,
+        hashed_password=hash_password(password),
+        role=user_role.value,
+        is_active=is_active
+    )
+    db.add(new_user)
+    await db.flush()
+    if user_role == models.UserRole.DOCTOR:
+        specialization = payload.get("specialization")
+        if not specialization:
+            raise HTTPException(status_code=400, detail="Specialization required for doctors")
+        doctor_profile = models.DoctorProfile(
+            user_id=new_user.id,
+            specialization=specialization,
+            bio=payload.get("bio", ""),
+            experience_years=payload.get("experience_years"),
+            consultation_fee=payload.get("consultation_fee")
+        )
+        db.add(doctor_profile)
+    await db.commit()
+    await db.refresh(new_user)
+    return {"message": "User created", "user_id": new_user.id, "role": new_user.role}
 
 @router.put("/users/{user_id}")
 async def update_user(user_id: int, payload: dict, db: AsyncSession = Depends(get_db), admin=Depends(require_admin)):
