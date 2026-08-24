@@ -65,6 +65,7 @@ async def update_doctor_profile(
 
 @router.get("/doctors")
 async def list_doctors(specialization: str = None, max_fee: int = None, min_experience: int = None, db: AsyncSession = Depends(get_db)):
+    from datetime import date, timedelta
     query = select(models.DoctorProfile).options(joinedload(models.DoctorProfile.user))
     if specialization:
         query = query.where(models.DoctorProfile.specialization.ilike(f"%{specialization}%"))
@@ -75,17 +76,50 @@ async def list_doctors(specialization: str = None, max_fee: int = None, min_expe
     
     result = await db.execute(query)
     profiles = result.scalars().all()
-    return [
-        {
+    
+    today = date.today()
+    week_end = today + timedelta(days=7)
+    
+    doctors = []
+    for p in profiles:
+        # Check if doctor has availability in next 7 days
+        avail_res = await db.execute(
+            select(models.DoctorAvailability).where(
+                models.DoctorAvailability.doctor_user_id == p.user_id,
+                models.DoctorAvailability.is_available == True
+            )
+        )
+        avail_slots = avail_res.scalars().all()
+        has_availability = False
+        for slot in avail_slots:
+            # If slot has date range, check overlap with next 7 days
+            slot_start = slot.start_date or today
+            slot_end = slot.end_date or week_end
+            if slot_start <= week_end and slot_end >= today:
+                has_availability = True
+                break
+        
+        doctors.append({
             "id": p.user_id, 
             "name": p.user.full_name, 
             "specialization": p.specialization, 
             "experience": p.experience_years, 
             "fee": p.consultation_fee, 
-            "bio": p.bio
-        } 
-        for p in profiles
-    ]
+            "bio": p.bio,
+            "has_availability_this_week": has_availability
+        })
+    return doctors
+
+@router.get("/doctors/{doctor_id}/availability")
+async def get_doctor_availability_public(doctor_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(models.DoctorAvailability).where(
+            models.DoctorAvailability.doctor_user_id == doctor_id,
+            models.DoctorAvailability.is_available == True
+        ).order_by(models.DoctorAvailability.day_of_week, models.DoctorAvailability.start_time)
+    )
+    slots = result.scalars().all()
+    return [{"day_of_week": s.day_of_week, "start_time": s.start_time, "end_time": s.end_time, "start_date": s.start_date.isoformat() if s.start_date else None, "end_date": s.end_date.isoformat() if s.end_date else None} for s in slots]
 
 @router.get("/doctor/availability")
 async def get_availability(current_user: models.User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
@@ -93,7 +127,7 @@ async def get_availability(current_user: models.User = Depends(get_current_user)
         raise HTTPException(status_code=403, detail="Only doctors")
     result = await db.execute(select(models.DoctorAvailability).where(models.DoctorAvailability.doctor_user_id == current_user.id).order_by(models.DoctorAvailability.day_of_week, models.DoctorAvailability.start_time))
     slots = result.scalars().all()
-    return [{"id": s.id, "day_of_week": s.day_of_week, "start_time": s.start_time, "end_time": s.end_time, "is_available": s.is_available} for s in slots]
+    return [{"id": s.id, "day_of_week": s.day_of_week, "start_time": s.start_time, "end_time": s.end_time, "is_available": s.is_available, "start_date": s.start_date.isoformat() if s.start_date else None, "end_date": s.end_date.isoformat() if s.end_date else None} for s in slots]
 
 @router.post("/doctor/availability")
 async def add_availability(payload: dict, current_user: models.User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
@@ -102,9 +136,14 @@ async def add_availability(payload: dict, current_user: models.User = Depends(ge
     day = payload.get("day_of_week")
     start = payload.get("start_time")
     end = payload.get("end_time")
+    start_date = payload.get("start_date")
+    end_date = payload.get("end_date")
     if day is None or not start or not end:
         raise HTTPException(status_code=400, detail="day_of_week, start_time, end_time required")
-    slot = models.DoctorAvailability(doctor_user_id=current_user.id, day_of_week=int(day), start_time=start, end_time=end, is_available=True)
+    from datetime import datetime
+    sd = datetime.fromisoformat(start_date).date() if start_date else None
+    ed = datetime.fromisoformat(end_date).date() if end_date else None
+    slot = models.DoctorAvailability(doctor_user_id=current_user.id, day_of_week=int(day), start_time=start, end_time=end, is_available=True, start_date=sd, end_date=ed)
     db.add(slot)
     await db.commit()
     await db.refresh(slot)

@@ -163,8 +163,8 @@
         <div id="view-availability" class="hidden">
             <div class="max-w-3xl mx-auto bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
                 <h3 class="text-xl font-bold text-slate-800 mb-2">Gestion des disponibilités</h3>
-                <p class="text-sm text-slate-500 mb-6">Définissez vos créneaux récurrents. Les patients pourront réserver uniquement pendant ces plages.</p>
-                <form id="availability-form" class="flex gap-3 mb-6">
+                <p class="text-sm text-slate-500 mb-6">Définissez vos créneaux. Vous pouvez choisir une récurrence hebdomadaire ou une période spécifique.</p>
+                <form id="availability-form" class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
                     <select id="avail-day" class="px-4 py-3 rounded-xl border border-slate-200">
                         <option value="0">Lundi</option>
                         <option value="1">Mardi</option>
@@ -176,7 +176,11 @@
                     </select>
                     <input id="avail-start" type="time" class="px-4 py-3 rounded-xl border border-slate-200">
                     <input id="avail-end" type="time" class="px-4 py-3 rounded-xl border border-slate-200">
-                    <button type="submit" class="px-4 py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700">Ajouter</button>
+                    <div class="flex gap-2">
+                        <input id="avail-start-date" type="date" class="px-4 py-3 rounded-xl border border-slate-200 w-full" placeholder="Date début (optionnel)">
+                        <input id="avail-end-date" type="date" class="px-4 py-3 rounded-xl border border-slate-200 w-full" placeholder="Date fin (optionnel)">
+                    </div>
+                    <button type="submit" class="px-4 py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 md:col-span-2">Ajouter</button>
                 </form>
                 <div id="availability-list" class="space-y-3"></div>
             </div>

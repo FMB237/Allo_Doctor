@@ -395,15 +395,17 @@ let hasNewAppointment = false;
                     list.innerHTML = '<p class="text-slate-500 text-sm">Aucune disponibilité définie.</p>';
                     return;
                 }
-                list.innerHTML = slots.map(s => `
+                list.innerHTML = slots.map(s => {
+                    const dateRange = s.start_date && s.end_date ? ` (${s.start_date} → ${s.end_date})` : s.start_date ? ` (à partir du ${s.start_date})` : s.end_date ? ` (jusqu'au ${s.end_date})` : ' (récurrent)';
+                    return `
                     <div class="flex items-center justify-between p-4 border border-slate-200 rounded-xl">
                         <div>
-                            <div class="font-semibold">${days[s.day_of_week]} ${s.start_time} - ${s.end_time}</div>
+                            <div class="font-semibold">${days[s.day_of_week]} ${s.start_time} - ${s.end_time}${dateRange}</div>
                             <div class="text-xs text-slate-500">${s.is_available ? 'Disponible' : 'Indisponible'}</div>
                         </div>
                         <button onclick="deleteAvailability(${s.id})" class="text-red-600 hover:underline text-sm">Supprimer</button>
-                    </div>
-                `).join('');
+                    </div>`;
+                }).join('');
             } catch(e) {
                 showToast('Erreur chargement disponibilités','error');
             }
@@ -413,9 +415,11 @@ let hasNewAppointment = false;
             const day = document.getElementById('avail-day').value;
             const start = document.getElementById('avail-start').value;
             const end = document.getElementById('avail-end').value;
+            const startDate = document.getElementById('avail-start-date').value || null;
+            const endDate = document.getElementById('avail-end-date').value || null;
             if (!start || !end) { showToast('Heures requises','error'); return; }
             try {
-                await apiPost('/doctor/availability', {day_of_week: day, start_time: start, end_time: end});
+                await apiPost('/doctor/availability', {day_of_week: day, start_time: start, end_time: end, start_date: startDate, end_date: endDate});
                 showToast('Disponibilité ajoutée');
                 e.target.reset();
                 loadAvailability();
