@@ -65,6 +65,7 @@ async def update_doctor_profile(
 
 @router.get("/doctors")
 async def list_doctors(specialization: str = None, max_fee: int = None, min_experience: int = None, db: AsyncSession = Depends(get_db)):
+    from datetime import date, timedelta
     query = select(models.DoctorProfile).options(joinedload(models.DoctorProfile.user))
     if specialization:
         query = query.where(models.DoctorProfile.specialization.ilike(f"%{specialization}%"))
@@ -75,17 +76,39 @@ async def list_doctors(specialization: str = None, max_fee: int = None, min_expe
     
     result = await db.execute(query)
     profiles = result.scalars().all()
-    return [
-        {
+    
+    today = date.today()
+    week_end = today + timedelta(days=7)
+    
+    doctors = []
+    for p in profiles:
+        # Check if doctor has availability in next 7 days
+        avail_res = await db.execute(
+            select(models.DoctorAvailability).where(
+                models.DoctorAvailability.doctor_user_id == p.user_id,
+                models.DoctorAvailability.is_available == True
+            )
+        )
+        avail_slots = avail_res.scalars().all()
+        has_availability = False
+        for slot in avail_slots:
+            # If slot has date range, check overlap with next 7 days
+            slot_start = slot.start_date or today
+            slot_end = slot.end_date or week_end
+            if slot_start <= week_end and slot_end >= today:
+                has_availability = True
+                break
+        
+        doctors.append({
             "id": p.user_id, 
             "name": p.user.full_name, 
             "specialization": p.specialization, 
             "experience": p.experience_years, 
             "fee": p.consultation_fee, 
-            "bio": p.bio
-        } 
-        for p in profiles
-    ]
+            "bio": p.bio,
+            "has_availability_this_week": has_availability
+        })
+    return doctors
 
 @router.get("/doctors/{doctor_id}/availability")
 async def get_doctor_availability_public(doctor_id: int, db: AsyncSession = Depends(get_db)):
