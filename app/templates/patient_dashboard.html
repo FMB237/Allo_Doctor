@@ -126,24 +126,16 @@
 
     <!-- Booking Modal -->
     <div id="booking-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full overflow-hidden max-h-[90vh] flex flex-col">
             <div class="p-6 border-b border-slate-100 flex justify-between items-center">
                 <h3 class="text-xl font-bold text-slate-800">Prendre Rendez-vous</h3>
                 <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 transition"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
-            <div class="p-6">
+            <div class="p-6 overflow-y-auto">
                 <div id="modal-doctor-info" class="mb-6 p-4 bg-blue-50 rounded-2xl flex items-center gap-4"></div>
-                <form id="booking-form" class="space-y-4">
-                    <input type="hidden" id="modal-doctor-id">
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1">Date et Heure</label>
-                        <input type="datetime-local" id="appointment-time" required 
-                               class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition">
-                    </div>
-                    <button type="submit" id="submit-booking" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                        <span id="btn-text">Confirmer le Rendez-vous</span>
-                    </button>
-                </form>
+                <div id="slots-container" class="space-y-4">
+                    <p class="text-sm text-slate-500">Chargement des créneaux disponibles...</p>
+                </div>
             </div>
         </div>
     </div>

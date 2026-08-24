@@ -1,7 +1,7 @@
-from sqlalchemy import String, Boolean, ForeignKey, Text, DateTime, func
+from sqlalchemy import String, Boolean, ForeignKey, Text, DateTime, func, Date
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 import enum
-from datetime import datetime
+from datetime import datetime, date
 from .database import Base
 
 # Inherit from str so SQLite can store it as text
@@ -101,6 +101,8 @@ class DoctorAvailability(Base):
     start_time: Mapped[str] = mapped_column(String, nullable=False)  # HH:MM
     end_time: Mapped[str] = mapped_column(String, nullable=False)  # HH:MM
     is_available: Mapped[bool] = mapped_column(Boolean, default=True)
+    start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     def __repr__(self):
         return f"<DoctorAvailability(doctor={self.doctor_user_id}, day={self.day_of_week})>"
