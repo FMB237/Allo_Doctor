@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="manifest" href="/static/manifest.json">
     <title>Inscription réussie | Allo Doctor</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -29,6 +31,13 @@
         const btn = document.getElementById('dashboard-btn');
         btn.href = dashboardUrl;
         setTimeout(() => { window.location.href = dashboardUrl; }, 5000);
+    </script>
+    <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/static/sw.js').catch(()=>{});
+      });
+    }
     </script>
 </body>
 </html>

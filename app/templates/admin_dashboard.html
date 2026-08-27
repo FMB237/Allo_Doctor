@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="manifest" href="/static/manifest.json">
     <title>Tableau de Bord Admin | Allo Doctor</title>
     <script>
         window.tailwind = window.tailwind || {};
@@ -110,6 +112,14 @@
                     <div class="text-2xl font-extrabold text-yellow-600" id="stat-pending">-</div>
                     <div class="text-xs text-slate-500 font-semibold uppercase">En attente</div>
                 </div>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-200 p-6 mb-6">
+                <h3 class="font-bold mb-4">Test Email</h3>
+                <div class="flex gap-3">
+                    <input id="test-email-input" type="email" placeholder="email@test.com" class="flex-1 px-3 py-2 rounded-lg border border-slate-200">
+                    <button onclick="sendTestEmail()" class="px-4 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700">Envoyer test</button>
+                </div>
+                <p class="text-xs text-slate-500 mt-2">Envoyer un email de test pour vérifier la configuration SMTP</p>
             </div>
             <div class="bg-white rounded-2xl border border-slate-200 p-6">
                 <h3 class="font-bold mb-4">Activité récente</h3>
@@ -328,5 +338,12 @@
     </div>
 
     <script src="/static/js/admin_dashboard.js"></script>
+    <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/static/sw.js').catch(()=>{});
+      });
+    }
+    </script>
 </body>
 </html>

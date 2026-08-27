@@ -322,4 +322,18 @@ async function loadAudit(){
 }
 
 // ========== START ==========
+async function sendTestEmail(){
+    const email = document.getElementById('test-email-input').value.trim();
+    if(!email){ showToast('Entrez un email','error'); return; }
+    try{
+        const res = await fetch(`${API_BASE}/api/admin/test-email?to=${encodeURIComponent(email)}`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${getToken()}` }
+        });
+        const data = await res.json();
+        if(!res.ok) throw new Error(data.detail || 'Erreur');
+        showToast('Email test envoyé !','success');
+    }catch(err){ showToast(err.message,'error'); }
+}
+
 init();

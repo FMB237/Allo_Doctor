@@ -1,17 +1,39 @@
 from contextlib import asynccontextmanager
+import asyncio
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app.database import engine, Base
 from app.routers import pages, auth, doctors, appointments, sse, admin
+from app.services.reminder_service import check_and_send_reminders
+
+scheduler = AsyncIOScheduler()
+
+async def run_reminders():
+    from app.database import AsyncSessionLocal
+    async with AsyncSessionLocal() as db:
+        await check_and_send_reminders(db)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     print("✅ Database tables created successfully!")
+    
+    # Start reminder scheduler
+    scheduler.add_job(
+        lambda: asyncio.create_task(run_reminders()),
+        'interval',
+        minutes=15,
+        id='appointment_reminders'
+    )
+    scheduler.start()
+    print("✅ Reminder scheduler started")
+    
     yield
+    scheduler.shutdown()
     await engine.dispose()
 
 app = FastAPI(

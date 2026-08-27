@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="manifest" href="/static/manifest.json">
     <title>Tableau de Bord Docteur | Allo Doctor</title>
     <script>
         window.tailwind = window.tailwind || {};
@@ -237,5 +239,12 @@
         </div>
     </main>
     <script src="/static/js/doctor_dashboard.js"></script>
+    <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/static/sw.js').catch(()=>{});
+      });
+    }
+    </script>
 </body>
 </html>
