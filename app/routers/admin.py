@@ -6,6 +6,7 @@ from sqlalchemy.orm import selectinload
 from app.database import get_db
 from app import models
 from app.auth_utils import require_admin, hash_password, is_strong_password
+from app.services.email_service import send_email
 import csv, io, json
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -293,3 +294,14 @@ async def update_appointment(appointment_id: int, payload: dict, db: AsyncSessio
     await log_audit(db, admin.id, "appointment_updated", "Appointment", appt.id, changes)
     await db.commit()
     return {"message": "Appointment updated"}
+
+@router.post("/test-email")
+async def test_email(to: str, admin=Depends(require_admin)):
+    success = await send_email(
+        to_email=to,
+        subject="Test Allo Doctor Email",
+        html_body="<h1>Test réussi !</h1><p>Les emails fonctionnent correctement.</p>"
+    )
+    if success:
+        return {"message": f"Email test envoyé à {to}"}
+    raise HTTPException(status_code=500, detail="Échec de l'envoi de l'email")
